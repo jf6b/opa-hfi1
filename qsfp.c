@@ -76,6 +76,9 @@ static int __i2c_write(struct hfi1_pportdata *ppd, u32 target, int i2c_addr,
 				       buff + cnt, wlen);
 		if (ret) {
 			/* hfi1_twsi_blk_wr() 1 for error, else 0 */
+			dd_dev_info(dd,
+				    "%s: blk_wr failed, ret %d\n",
+				    __func__, ret);
 			return -EIO;
 		}
 		offset += wlen;
@@ -388,8 +391,8 @@ retry:
 		 */
 		if (ret < 0 && retry_count < 5) {
 			retry_count++;
-			dd_dev_info(ppd->dd, "%s: QSFP not responding, waiting and retrying\n",
-				    __func__);
+			dd_dev_err(ppd->dd, "%s: QSFP not responding, waiting and retrying %d\n",
+				    __func__, retry_count);
 			msleep(2000);
 			goto retry;
 		}

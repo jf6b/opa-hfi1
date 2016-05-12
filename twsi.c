@@ -461,8 +461,11 @@ int hfi1_twsi_blk_wr(struct hfi1_devdata *dd, u32 target, int dev, int addr,
 		}
 	} else {
 		/* Real I2C */
-		if (twsi_wr(dd, target, dev | WRITE_CMD, HFI1_TWSI_START))
+		if (twsi_wr(dd, target, dev | WRITE_CMD, HFI1_TWSI_START)) {
+			dd_dev_info(dd, "%s: \"real\" twsi_wr failed\n",
+				    __func__);
 			goto failed_write;
+		}
 	}
 
 	for (i = 0; i < offset_size; i++) {
@@ -476,8 +479,11 @@ int hfi1_twsi_blk_wr(struct hfi1_devdata *dd, u32 target, int dev, int addr,
 	}
 
 	for (i = 0; i < len; i++)
-		if (twsi_wr(dd, target, *bp++, 0))
+		if (twsi_wr(dd, target, *bp++, 0)) {
+			dd_dev_info(dd, "%s: twsi_wr failed: i = %d\n",
+				    __func__, i);
 			goto failed_write;
+		}
 
 	ret = 0;
 
