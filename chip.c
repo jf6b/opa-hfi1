@@ -14129,7 +14129,7 @@ static int init_asic_data(struct hfi1_devdata *dd)
 	if (peer) {
 		dd->asic_data = peer->asic_data;
 	} else {
-		dd->asic_data = kzalloc(sizeof(*dd->asic_data), GFP_KERNEL);
+		dd->asic_data = kzalloc(sizeof(*dd->asic_data), GFP_ATOMIC);
 		if (!dd->asic_data) {
 			ret = -ENOMEM;
 			goto done;
