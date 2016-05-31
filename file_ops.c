@@ -50,6 +50,8 @@
 #include <linux/aio.h>
 #include <linux/vmalloc.h>
 
+#include <rdma/ib.h>
+
 #include "hfi.h"
 #include "pio.h"
 #include "device.h"
@@ -198,6 +200,10 @@ static ssize_t hfi1_file_write(struct file *fp, const char __user *data,
 	bool access_allowed = fp->f_cred == current_cred() && segment_eq(get_fs(), USER_DS);
 
 	if (WARN_ON_ONCE(!access_allowed))
+		return -EACCES;
+
+	/* FIXME: This interface is unacceptable upstream */
+	if (WARN_ON_ONCE(!ib_safe_file_access(fp)))
 		return -EACCES;
 
 	if (count < sizeof(cmd)) {
