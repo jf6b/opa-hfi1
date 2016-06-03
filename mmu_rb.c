@@ -58,6 +58,7 @@ struct mmu_rb_handler {
 	struct rb_root *root;
 	spinlock_t lock;        /* protect the RB tree */
 	struct mmu_rb_ops *ops;
+	struct mm_struct *mm;
 	int registered;
 };
 
@@ -113,11 +114,12 @@ int hfi1_mmu_rb_register(struct rb_root *root, struct mmu_rb_ops *ops)
 	INIT_HLIST_NODE(&handlr->mn.hlist);
 	spin_lock_init(&handlr->lock);
 	handlr->mn.ops = &mn_opts;
+	handlr->mm = current->mm;
 	spin_lock(&mmu_rb_lock);
 	list_add_tail_rcu(&handlr->list, &mmu_rb_handlers);
 	spin_unlock(&mmu_rb_lock);
 
-	ret =  mmu_notifier_register(&handlr->mn, current->mm);
+	ret =  mmu_notifier_register(&handlr->mn, handlr->mm);
 	handlr->registered = ret ? 0 : 1;
 
 	return ret;
@@ -132,8 +134,8 @@ void hfi1_mmu_rb_unregister(struct rb_root *root)
 		return;
 
 	/* Unregister first so we don't get any more notifications. */
-	if (handler->registered && current->mm)
-		mmu_notifier_unregister(&handler->mn, current->mm);
+	if (handler->registered)
+		mmu_notifier_unregister(&handler->mn, handler->mm);
 
 	spin_lock(&mmu_rb_lock);
 	list_del_rcu(&handler->list);
