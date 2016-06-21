@@ -147,6 +147,7 @@ void hfi1_mmu_rb_unregister(struct rb_root *root)
 	spin_unlock(&mmu_rb_lock);
 	synchronize_rcu();
 
+	down_write(&handler->mm->mmap_sem);
 	spin_lock_irqsave(&handler->lock, flags);
 	if (!RB_EMPTY_ROOT(root)) {
 		struct rb_node *node;
@@ -156,10 +157,11 @@ void hfi1_mmu_rb_unregister(struct rb_root *root)
 			rbnode = rb_entry(node, struct mmu_rb_node, node);
 			rb_erase(node, root);
 			if (handler->ops->remove)
-				handler->ops->remove(root, rbnode, NULL);
+				handler->ops->remove(root, rbnode, handler->mm);
 		}
 	}
 	spin_unlock_irqrestore(&handler->lock, flags);
+	up_write(&handler->mm->mmap_sem);
 
 	kfree(handler);
 }

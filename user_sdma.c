@@ -1625,7 +1625,7 @@ static void sdma_rb_remove(struct rb_root *root, struct mmu_rb_node *mnode,
 	 * We have to take the above lock first because we are racing
 	 * against the setting of the bit in the eviction function.
 	 */
-	if (mm && test_bit(SDMA_CACHE_NODE_EVICT, &node->flags)) {
+	if (test_bit(SDMA_CACHE_NODE_EVICT, &node->flags)) {
 		spin_unlock(&node->pq->evict_lock);
 		return;
 	}
@@ -1636,19 +1636,14 @@ static void sdma_rb_remove(struct rb_root *root, struct mmu_rb_node *mnode,
 	spin_unlock(&node->pq->evict_lock);
 
 	/*
-	 * If mm is set, we are being called by the MMU notifier and we
-	 * should not pass a mm_struct to unpin_vector_page(). This is to
+	 * We should not pass a mm_struct to unpin_vector_page(). This is to
 	 * prevent a deadlock when hfi1_release_user_pages() attempts to
-	 * take the mmap_sem, which the MMU notifier has already taken.
+	 * take the mmap_sem, which our caller has already taken.  Instead,
+	 * we have to adjust the pinned page count ourselves.
 	 */
-	unpin_vector_pages(mm ? NULL : current->mm, node->pages, 0,
-			   node->npages);
-	/*
-	 * If called by the MMU notifier, we have to adjust the pinned
-	 * page count ourselves.
-	 */
-	if (mm)
-		mm->pinned_vm -= node->npages;
+	unpin_vector_pages(NULL, node->pages, 0, node->npages);
+	mm->pinned_vm -= node->npages;
+
 	kfree(node);
 }
 
