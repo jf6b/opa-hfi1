@@ -222,7 +222,7 @@ static struct mmu_rb_node *__mmu_rb_search(struct mmu_rb_handler *handler,
 
 /* Caller must *not* hold handler lock. */
 static void __mmu_rb_remove(struct mmu_rb_handler *handler,
-			    struct mmu_rb_node *node, struct mm_struct *mm)
+			    struct mmu_rb_node *node)
 {
 	unsigned long flags;
 
@@ -233,8 +233,12 @@ static void __mmu_rb_remove(struct mmu_rb_handler *handler,
 	__mmu_int_rb_remove(node, handler->root);
 	spin_unlock_irqrestore(&handler->lock, flags);
 
+	down_write(&handler->mm->mmap_sem);
+
 	if (handler->ops->remove)
-		handler->ops->remove(handler->root, node, mm);
+		handler->ops->remove(handler->root, node, handler->mm);
+
+	up_write(&handler->mm->mmap_sem);
 }
 
 struct mmu_rb_node *hfi1_mmu_rb_search(struct rb_root *root, unsigned long addr,
@@ -280,7 +284,7 @@ void hfi1_mmu_rb_remove(struct rb_root *root, struct mmu_rb_node *node)
 	if (!handler || !node)
 		return;
 
-	__mmu_rb_remove(handler, node, NULL);
+	__mmu_rb_remove(handler, node);
 }
 
 static struct mmu_rb_handler *find_mmu_handler(struct rb_root *root)
@@ -331,6 +335,7 @@ static void mmu_notifier_mem_invalidate(struct mmu_notifier *mn,
 			  node->addr, node->len);
 		if (handler->ops->invalidate(root, node)) {
 			__mmu_int_rb_remove(node, root);
+			/* NOTE: mmu notifier code holds mmap_sem for us */
 			if (handler->ops->remove)
 				handler->ops->remove(root, node, mm);
 		}
