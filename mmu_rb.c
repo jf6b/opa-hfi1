@@ -155,7 +155,8 @@ void hfi1_mmu_rb_unregister(struct rb_root *root)
 			rbnode = rb_entry(node, struct mmu_rb_node, node);
 			rb_erase(node, root);
 			if (handler->ops->remove)
-				handler->ops->remove(root, rbnode, handler->mm);
+				handler->ops->remove(root, rbnode, handler->mm,
+						     false);
 		}
 	}
 	spin_unlock_irqrestore(&handler->lock, flags);
@@ -234,7 +235,7 @@ static void __mmu_rb_remove(struct mmu_rb_handler *handler,
 	down_write(&handler->mm->mmap_sem);
 
 	if (handler->ops->remove)
-		handler->ops->remove(handler->root, node, handler->mm);
+		handler->ops->remove(handler->root, node, handler->mm, false);
 
 	up_write(&handler->mm->mmap_sem);
 }
@@ -335,7 +336,7 @@ static void mmu_notifier_mem_invalidate(struct mmu_notifier *mn,
 			__mmu_int_rb_remove(node, root);
 			/* NOTE: mmu notifier code holds mmap_sem for us */
 			if (handler->ops->remove)
-				handler->ops->remove(root, node, mm);
+				handler->ops->remove(root, node, mm, true);
 		}
 	}
 	spin_unlock_irqrestore(&handler->lock, flags);
